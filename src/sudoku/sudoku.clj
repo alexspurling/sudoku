@@ -1,4 +1,5 @@
-(ns sudoku.sudoku)
+(ns sudoku.sudoku
+  (:require clojure.set))
 
 (def puzzle
   [[0 0 3  0 2 0  6 0 0]
@@ -12,6 +13,8 @@
    [0 0 2  6 0 9  5 0 0]
    [8 0 0  2 0 3  0 0 9]
    [0 0 5  0 1 0  3 0 0]])
+
+(def one-to-nine (set (range 1 10)))
 
 (defn get-row [p y]
   (nth p y))
@@ -27,21 +30,17 @@
         row3 (subvec (get-row p (+ 2 square-y)) square-x (+ 3 square-x))]
     (concat row1 row2 row3)))
 
-(defn- is-valid-placement [p [y x] v]
-  "Placement of value v is valid at position x y if that value
-  does not already exist in any row, column or square"
-  (cond
-    (some #{v} (get-row p y)) false
-    (some #{v} (get-col p x)) false
-    (some #{v} (get-square p x y)) false
-    :else true))
+(defn- get-valid-values-at [p [y x]]
+  (let [used-values (concat (get-row p y)
+                            (get-col p x)
+                            (get-square p x y))]
+    (clojure.set/difference one-to-nine (set used-values))))
 
 (defn- cell-solutions [p c]
   "Given a puzzle, returns a set of puzzles with valid values
    at cell [x y]"
   (if (zero? (get-in p c))
-    (let [solutions (filter #(is-valid-placement p c %) (range 1 10))]
-      (map #(assoc-in p c %) solutions))
+    (map #(assoc-in p c %) (get-valid-values-at p c))
     [p]))
 
 (defn solve
