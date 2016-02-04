@@ -13,26 +13,6 @@
    [8 0 0  2 0 3  0 0 9]
    [0 0 5  0 1 0  3 0 0]])
 
-(def puzzle2
-  [[0 0 0 6 7 0 9 0 0]
-   [0 7 0 1 9 0 3 4 8]
-   [1 9 8 3 4 2 5 0 7]
-
-   [8 5 0 7 0 1 0 2 3]
-   [4 0 6 0 5 3 7 9 1]
-   [7 1 3 9 2 4 8 5 6]
-
-   [0 6 1 5 3 7 2 8 4]
-   [2 8 7 4 1 9 0 3 5]
-   [3 0 0 2 8 6 1 7 0]])
-
-; There are no duplicate digits (other than 0)
-(defn is-valid-set [s]
-  (let [no-zeros (filter (complement zero?) s)]
-    (if (empty? no-zeros)
-      true
-      (apply distinct? no-zeros))))
-
 (defn get-row [p y]
   (nth p y))
 
@@ -47,39 +27,26 @@
         row3 (subvec (get-row p (+ 2 square-y)) square-x (+ 3 square-x))]
     (concat row1 row2 row3)))
 
-(defn get-all-sets [p]
-  (let [square-coords (for [x (range 3) y (range 3)] [(* 3 x) (* 3 y)])
-        all-squares (map (fn [[sx sy]] (get-square p sx sy)) square-coords)
-        all-rows (map (partial get-row p) (range 9))
-        all-cols (map (partial get-col p) (range 9))]
-    (concat all-squares all-rows all-cols)))
+(defn- is-valid-placement [p [y x] v]
+  "Placement of value v is valid at position x y if that value
+  does not already exist in any row, column or square"
+  (cond
+    (some #{v} (get-row p y)) false
+    (some #{v} (get-col p x)) false
+    (some #{v} (get-square p x y)) false
+    :else true))
 
-(defn is-valid
-  ([p]
-   "Returns true if every set of 9 cells is valid."
-    (every? is-valid-set (get-all-sets p)))
-  ([p [x y]]
-    "Returns true if all the rows, columns and squares that
-    intersect with x, y are valid"
-    (let [sets [(get-row p y) (get-col p y) (get-square p x y)]]
-      (every? true? (map is-valid-set sets)))))
-
-(defn is-solved [p]
-  "A puzzle is solved if every number is not zero"
-  (and (every? #(every? (complement zero?) %) p)
-       (is-valid p)))
-
-(defn- cell-solutions [p [x y]]
+(defn- cell-solutions [p c]
   "Given a puzzle, returns a set of puzzles with valid values
-   at cell x y"
-  (if (zero? (get-in p [x y]))
-    (let [solutions (map #(assoc-in p [x y] %) (range 1 10))]
-      (filter #(is-valid % [x y]) solutions))
+   at cell [x y]"
+  (if (zero? (get-in p c))
+    (let [solutions (filter #(is-valid-placement p c %) (range 1 10))]
+      (map #(assoc-in p c %) solutions))
     [p]))
 
 (defn solve
   ([p]
-    (solve p (lazy-report (for [x (range 9) y (range 9)] [x y]) println 1)))
+    (solve p (for [x (range 9) y (range 9)] [x y])))
   ([p [c & coords]]
     (if c
       (let [solutions (cell-solutions p c)]
